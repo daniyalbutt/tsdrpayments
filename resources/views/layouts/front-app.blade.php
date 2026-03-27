@@ -107,7 +107,7 @@
                     </li>
                     @endcan
                     @can('scrapped')
-                    <li>
+                    <li class="d-none">
                         <a class="ai-icon" href="{{ route('scrapped.index') }}" aria-expanded="false">
                             <i class="flaticon-072-printer"></i>
                             <span class="nav-text">Scrapped Leads</span>

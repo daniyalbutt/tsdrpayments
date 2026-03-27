@@ -54,6 +54,7 @@ class MerchantController extends Controller
         $data->merchant = $request->type;
         $data->public_key = $request->public_key;
         $data->private_key = $request->private_key;
+        $data->square_location_id = $request->square_location_id;
         $data->sandbox = $request->sandbox;
         $data->status = $request->status;
         $data->save();
@@ -103,6 +104,7 @@ class MerchantController extends Controller
         $data->private_key = $request->private_key;
         $data->sandbox = $request->sandbox;
         $data->status = $request->status;
+        $data->square_location_id = $request->square_location_id;
         $data->save();
         return redirect()->back()->with('success', 'Merchant Updated Successfully');   
     }

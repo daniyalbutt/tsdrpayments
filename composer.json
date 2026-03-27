@@ -19,6 +19,7 @@
         "maatwebsite/excel": "^1.1",
         "spatie/laravel-permission": "^6.19",
         "square/connect": "^3.20200528",
+        "square/square": "^45.0",
         "stripe/stripe-php": "^7.61"
     },
     "require-dev": {
@@ -31,7 +32,10 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     },
     "extra": {
         "laravel": {

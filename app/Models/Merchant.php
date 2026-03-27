@@ -18,6 +18,10 @@ class Merchant extends Model
             return 'AUTHORIZE';
         }else if($this->merchant == 5){
             return 'PAYPAL';
+        }else if($this->merchant == 6){
+            return 'SQUARE';
+        }else if($this->merchant == 7){
+            return 'PAYKINGS / TG';
         }
     }
 }

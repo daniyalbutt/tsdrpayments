@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StripeController;
+use App\Http\Controllers\SquareController;
+use App\Http\Controllers\PaykingsController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\FrontController;
@@ -33,7 +35,9 @@ Route::post('payment/save', [FrontController::class, 'paymentSave'])->name('paym
 Route::post('payment/authorize', [StripeController::class, 'paymentAuthorize'])->name('payment.authorize');
 Route::get('success/{id}', [StripeController::class, 'successPayment'])->name('success.payment');
 Route::get('declined/{id}', [StripeController::class, 'declinedPayment'])->name('declined.payment');
-Route::get('export', [FrontController::class, 'export'])->name('export');
+Route::get('expayment.squareport', [FrontController::class, 'export'])->name('export');
+Route::post('payment/square', [SquareController::class, 'paymentSquare'])->name('payment.square');
+Route::post('payment/square', [PaykingsController::class, 'processPayment'])->name('payment.paykings');
 
 // Route::get('stripe', [StripeController::class, 'stripe']);
 Route::post('stripe', [StripeController::class, 'stripePost'])->name('stripe.post');
@@ -45,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('update/profile', [App\Http\Controllers\HomeController::class, 'updateProfile'])->name('update.profile');
     Route::resource('clients', ClientController::class);
     Route::resource('payment', PaymentController::class);
+    Route::post('payment/{id}/check', [PaymentController::class, 'checkCredentials'])->name('merchant.check');
     Route::resource('brand', BrandsController::class);
     Route::resource('merchant', MerchantController::class);
     Route::get('show/response/{id}', [App\Http\Controllers\HomeController::class, 'showResponse'])->name('show.response');

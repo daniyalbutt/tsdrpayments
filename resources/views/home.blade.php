@@ -185,12 +185,14 @@
                         </div>
                         <div class="card-body p-0">
                             @foreach($customer as $key => $value)
-                            <div class="invoice-list">
-                                <div class="me-auto">
-                                    <h6 class="fs-15 font-w600 mb-0"><a href="javascript:;" class="text-black">{{ $value->name }}</a></h6>
-                                </div>
-                                <span class="fs-15 text-black font-w600">${{ $value->get_total_amount() }}</span>
-                            </div>
+                                @if($value->get_total_amount() > 0)
+                                    <div class="invoice-list">
+                                        <div class="me-auto">
+                                            <h6 class="fs-15 font-w600 mb-0"><a href="javascript:;" class="text-black">{{ $value->name }}</a></h6>
+                                        </div>
+                                        <span class="fs-15 text-black font-w600">${{ $value->get_total_amount() }}</span>
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>

@@ -6,6 +6,165 @@
   font-family: "Poppins", sans-serif;
 }
 
+.StripeElement {
+    box-sizing: border-box;
+    height: 45px;
+    padding: 12px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: white;
+    transition: box-shadow 150ms ease;
+    border-width: 1px;
+    border-color: lightgrey;
+    border-style: solid;
+    margin-bottom: 10px;
+    margin-top: 3px;
+}
+
+input#state {
+    margin-top: 0;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
+
+.StripeElement--focus {
+    box-shadow: 0 1px 3px 0 #cfd7df;
+}
+
+.StripeElement--invalid {
+    border-color: #fa755a;
+}
+
+.StripeElement--webkit-autofill {
+    background-color: #fefde5 !important;
+}
+/*NEW CSS*/
+*{
+    font-family: "Oswald", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+}
+.payment-right {
+    padding: 40px;
+    box-shadow: -2px -2px 2px 0 #e5e5e5;
+    background-color: white;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+input, textarea, select {
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    height: 42px !important;
+    padding-left: 15px !important;
+}
+label {
+    font-weight: 400;
+    font-size: 14px;
+    color: #0000008a;
+}
+select#state{
+    margin: 0;
+    border-top-left-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+    border-top-right-radius: 0 !important;
+}
+.payment-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    background-color: white;
+    padding-left: 40px;
+}
+
+.payment-left-inner h3 {
+    font-weight: bold;
+    font-size: 25px;
+}
+.payment-left-inner h2 {
+    font-weight: bold;
+    font-size: 40px;
+    margin: 0;
+    color: #17a2b8;
+}
+.payment-left-inner img {
+    margin-bottom: 20px;
+}
+.payment-left-inner h1 {
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-size: 32px;
+}
+input#cardnumber {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0px !important;
+    margin-bottom: 0;
+    border-top-right-radius: 0px !important;
+    margin-top: 0;
+    border-right: 0;
+}
+.form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+input#expiry {
+    margin: 0;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+input#cvv {
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0px !important;
+    margin-top: 0;
+    border-bottom-left-radius: 0 !important;
+}
+input#exp_year {
+    margin-top: 0;
+    border-radius: 0px !important;
+}
+.form-control::placeholder {
+    color: #d1d1d1;
+    opacity: 1; /* Firefox */
+}
+
+.form-control::-ms-input-placeholder { /* Edge 12 -18 */
+    color: #d1d1d1;
+}
+
+.error.hide {
+    display: none;
+}
+
+.form-control.required {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.form-control.required::placeholder {
+    color: #721c24;
+    opacity: 1; /* Firefox */
+}
+
+.form-control.required::-ms-input-placeholder { /* Edge 12 -18 */
+    color: #721c24;
+}
+
+span#basic-addon2 {
+    background-color: white;
+    padding: 0;
+    border-bottom-right-radius: 0;
+    border-left: 0;
+    padding-right: 10px;
+}
+
+.input-group-append {
+    margin: 0;
+}
+
 .container header {
   font-size: 24px;
   font-weight: 600;
@@ -704,3 +863,4 @@ label.checkout-box-wrapper input {
         padding: 20px 30px !important;
     }
 }
+

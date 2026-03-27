@@ -10,7 +10,7 @@
 		</ol>
 	</div>
 	<div class="row">
-		<div class="col-lg-12 col-12">
+		<div class="col-lg-8 col-12">
 		    <div class="card">
 		        <div class="card-header">
 					<h4 class="card-title">Merchant Form</h4>
@@ -44,7 +44,9 @@
 												<option value="0">STRIPE</option>
 												<option value="4">AUTHORIZE</option>
 												<option value="5">PAYPAL</option>
-												<option value="3">FETCH</option>
+												<!-- <option value="3">FETCH</option> -->
+												<option value="6">SQUARE</option>
+												<option value="7">PAYKINGS / TG</option>
 											</select>
 										</div>
 									</div>
@@ -59,14 +61,20 @@
 									</div>
 									<div class="col-md-12">
 										<div class="form-group mb-3">
-											<label class="form-label">Publishable key / Login ID / Client ID</label>
+											<label class="form-label">Publishable key / Login ID / Client ID / Application ID / Security Key </label>
 											<input type="text" class="form-control" name="public_key" value="{{ old('public_key') }}">
 										</div>
 									</div>
 									<div class="col-md-12">
 										<div class="form-group mb-3">
-											<label class="form-label">Secret key / Transaction Key / Client Secret</label>
+											<label class="form-label">Secret key / Transaction Key / Client Secret / Access Token</label>
 											<input type="text" class="form-control" name="private_key" value="{{ old('private_key') }}">
+										</div>
+									</div>
+									<div class="col-md-12 d-none" id="square_location_div">
+										<div class="form-group mb-3">
+											<label class="form-label">Square Location ID</label>
+											<input type="text" class="form-control" name="square_location_id" value="{{ old('square_location_id') }}">
 										</div>
 									</div>
 									<div class="col-md-12">
@@ -95,9 +103,36 @@
 		    </div>
 		    <!-- /.box -->			
 		</div>
+		<div class="col-lg-4">
+			<div class="card">
+				<div class="card-header">
+					<h4 class="card-title">Credentials For Merchant</h4>
+				</div>
+				<!-- /.box-header -->
+				<div class="card-body">
+					@include('merchant.merchant-details')
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 @endsection
 
 @push('scripts')
+<script>
+    function toggleSquareField() {
+        let type = document.getElementById('type').value;
+
+        if (type == "6") { // SQUARE
+            document.getElementById('square_location_div').classList.remove('d-none');
+        } else {
+            document.getElementById('square_location_div').classList.add('d-none');
+        }
+    }
+
+    document.getElementById('type').addEventListener('change', toggleSquareField);
+
+    // Run on page load (important for edit/old value)
+    window.onload = toggleSquareField;
+</script>
 @endpush

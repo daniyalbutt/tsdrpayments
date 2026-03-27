@@ -20,6 +20,7 @@ class StripeController extends Controller
 
     public function stripePost(Request $request)
     {
+        $payment_data = $request->input();
         $data = Payment::find($request->input('id'));
         if ($data->status == 0) {
             try {
@@ -39,7 +40,7 @@ class StripeController extends Controller
                 ]);
                 $chargeJson = $get_charge->jsonSerialize();
                 if ($chargeJson['amount_refunded'] == 0 && empty($chargeJson['failure_code']) && $chargeJson['paid'] == 1 && $chargeJson['captured'] == 1) {
-                    $data->update(['status'=> 2,'return_response'=>json_encode($chargeJson),'payment_data'=>$request->except(['amount','_token','id'])]);
+                    $data->update(['status'=> 2,'return_response'=>json_encode($chargeJson),'payment_data'=> json_encode($payment_data)]);
                     return redirect()->route('success.payment', ['id' => $data->id]);
                 }
             } catch (\Stripe\Exception\CardException $e) {
@@ -250,115 +251,131 @@ class StripeController extends Controller
         }
     }
     
-    public function paymentAuthorize(Request $request){
-        $input_request = $request->input();
-        $payments_id = $request->id;
-        $payments = Payment::find($payments_id);
-        if ($payments->status == 0) {
-            $name = $request->user_name;
-            $email = $request->user_email;
-            $city = $request->city;
-            $country = $request->country;
-            $set_state = $request->set_state;
-            $address = $request->address;
-            $zip = $request->cc_zip;
-            
-            $cardNumber = preg_replace('/\s+/', '', $request->input('cc_number'));
-            
-            $format_exp = $request->exp_month;
-            $format_year = '20' . $request->exp_year;
-            
-            $expirationDateNew = $format_year . '-' . $format_exp;
-            
-            $cvv = $request->input('cc_cvc');
-            
-            $merchantAuthentication = new AnetAPI\MerchantAuthenticationType();
-            $merchantAuthentication->setName($payments->merchants->public_key);
-            $merchantAuthentication->setTransactionKey($payments->merchants->private_key);
-            
-            $creditCard = new AnetAPI\CreditCardType();
-            $creditCard->setCardNumber($cardNumber);
-            $creditCard->setExpirationDate($expirationDateNew);
-            $creditCard->setCardCode($cvv);
-    
-            $payment = new AnetAPI\PaymentType();
-            $payment->setCreditCard($creditCard);
-            
-            $order = new AnetAPI\OrderType();
-            $order->setInvoiceNumber($payments->id);
-            $order->setDescription($payments->package);
-            
-            $customerAddress = new AnetAPI\CustomerAddressType();
-            $customerAddress->setFirstName($name);
-            $customerAddress->setAddress($address);
-            $customerAddress->setZip($zip);
-            $customerAddress->setCity($city);
-            $customerAddress->setState($set_state);
-            $customerAddress->setZip($zip);
-            $customerAddress->setCountry($country);
-            
-            $customerData = new AnetAPI\CustomerDataType();
-            $customerData->setType("individual");
-            $customerData->setId($payments->client_id);
-            $customerData->setemail($email);
-    
-            $transactionRequestType = new AnetAPI\TransactionRequestType();
-            $transactionRequestType->setTransactionType("authCaptureTransaction");
-            $transactionRequestType->setAmount($payments->price);
-            $transactionRequestType->setOrder($order);
-            $transactionRequestType->setPayment($payment);
-            $transactionRequestType->setBillTo($customerAddress);
-            $transactionRequestType->setCustomer($customerData);
-    
-            $request = new AnetAPI\CreateTransactionRequest();
-            $request->setMerchantAuthentication($merchantAuthentication);
-            $request->setRefId("ref" . time());
-            $request->setTransactionRequest($transactionRequestType);
-    
-            $controller = new AnetController\CreateTransactionController($request);
-            if($payments->merchants->sandbox == 0){
-                $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::PRODUCTION);
-            }else{
-                $response = $controller->executeWithApiResponse(\net\authorize\api\constants\ANetEnvironment::SANDBOX);
-            }
-            $update_payments = Payment::find($payments->id);
-            $update_payments->payment_data = $input_request;
-            if ($response != null) {
-                $tresponse = $response->getTransactionResponse();
-                if ($tresponse != null && $tresponse->getResponseCode() == "1") {
-                    $update_payments->status = 2;
-                    $update_payments->return_response = 'Payment Successfully - ' . $tresponse->getMessages()[0]->getDescription();
-                    $responseArray = json_decode(json_encode($tresponse), true);
-                    $responseArray['card_brand'] = $tresponse->getAccountType();
-                    $update_payments->authorize_response = $responseArray;
-                    $update_payments->save();
-                    return redirect()->route('success.payment', ['id' => $payments->id]);
-                } else {
-                    $update_payments->status = 1;
-                    if ($tresponse != null && $tresponse->getErrors() != null) {
-                        $update_payments->return_response = $tresponse->getErrors()[0]->getErrorText();
-                        $update_payments->authorize_response = json_encode($tresponse);
-                    } else {
-                        $update_payments->return_response = $response->getMessages()->getMessage()[0]->getText();
-                        $update_payments->authorize_response = json_encode($response);
-                    }
-                    $update_payments->save();
-                    return redirect()->route('declined.payment', ['id' => $payments->id]);
-                }
-            } else {
-                $update_payments->status = 1;
-                $update_payments->return_response = $response->getMessages()->getMessage()[0]->getText();
-                $update_payments->authorize_response = json_encode($response);
-                $update_payments->save();
-                return redirect()->route('declined.payment', ['id' => $payments->id]);
-            }
-            
-            
-        }else{
+    public function paymentAuthorize(Request $request)
+    {
+        $payment_data = $request->input();
+        $data = Payment::find($request->id);
+
+        if ($data->status != 0) {
             return response()->json([
                 'status' => 'declined',
                 'data' => 'Already Used'
             ], 200);
+        }
+
+        try {
+            $cardNumber = preg_replace('/\s+/', '', $request->cc_number);
+            $expirationDate = '20' . $request->exp_year . '-' . $request->exp_month;
+
+            // Merchant Authentication
+            $merchantAuthentication = new AnetAPI\MerchantAuthenticationType();
+            $merchantAuthentication->setName($data->merchants->public_key);
+            $merchantAuthentication->setTransactionKey($data->merchants->private_key);
+
+            // Card Details
+            $creditCard = new AnetAPI\CreditCardType();
+            $creditCard->setCardNumber($cardNumber);
+            $creditCard->setExpirationDate($expirationDate);
+            $creditCard->setCardCode($request->cc_cvc);
+
+            $paymentType = new AnetAPI\PaymentType();
+            $paymentType->setCreditCard($creditCard);
+
+            // Order Info
+            $order = new AnetAPI\OrderType();
+            $order->setInvoiceNumber($data->id);
+            $order->setDescription($data->package);
+
+            // Billing Info
+            $billTo = new AnetAPI\CustomerAddressType();
+            $billTo->setFirstName($request->user_name);
+            $billTo->setAddress($request->address);
+            $billTo->setCity($request->city);
+            $billTo->setState($request->set_state);
+            $billTo->setZip($request->cc_zip);
+            $billTo->setCountry($request->country);
+
+            // Customer Info
+            $customer = new AnetAPI\CustomerDataType();
+            $customer->setType("individual");
+            $customer->setId($data->client_id);
+            $customer->setEmail($request->user_email);
+
+            // Transaction Request
+            $transactionRequest = new AnetAPI\TransactionRequestType();
+            $transactionRequest->setTransactionType("authCaptureTransaction");
+            $transactionRequest->setAmount($data->price);
+            $transactionRequest->setOrder($order);
+            $transactionRequest->setPayment($paymentType);
+            $transactionRequest->setBillTo($billTo);
+            $transactionRequest->setCustomer($customer);
+
+            $anetRequest = new AnetAPI\CreateTransactionRequest();
+            $anetRequest->setMerchantAuthentication($merchantAuthentication);
+            $anetRequest->setRefId("ref" . time());
+            $anetRequest->setTransactionRequest($transactionRequest);
+
+            $controller = new AnetController\CreateTransactionController($anetRequest);
+
+            $response = $controller->executeWithApiResponse(
+                $data->merchants->sandbox == 0
+                    ? \net\authorize\api\constants\ANetEnvironment::PRODUCTION
+                    : \net\authorize\api\constants\ANetEnvironment::SANDBOX
+            );
+
+            if ($response && $response->getTransactionResponse()) {
+                $tresponse = $response->getTransactionResponse();
+
+                if ($tresponse->getResponseCode() == "1") {
+                    // SUCCESS
+                    $responseArray = json_decode(json_encode($tresponse), true);
+                    $responseArray['card_brand'] = $tresponse->getAccountType();
+
+                    $data->update([
+                        'status' => 2,
+                        'return_response' => 'Payment Successful - ' . $tresponse->getMessages()[0]->getDescription(),
+                        'authorize_response' => json_encode($responseArray),
+                        'payment_data' => json_encode($payment_data),
+                    ]);
+
+                    return redirect()->route('success.payment', ['id' => $data->id]);
+                } else {
+                    // FAILED (gateway error)
+                    $errorMsg = ($tresponse->getErrors() != null)
+                        ? $tresponse->getErrors()[0]->getErrorText()
+                        : 'Transaction failed';
+
+                    $data->update([
+                        'status' => 1,
+                        'return_response' => $errorMsg,
+                        'authorize_response' => json_encode($tresponse),
+                        'payment_data' => json_encode($payment_data),
+                    ]);
+
+                    return redirect()->route('declined.payment', ['id' => $data->id]);
+                }
+            }
+
+            // NULL RESPONSE
+            $data->update([
+                'status' => 1,
+                'return_response' => 'No response from payment gateway',
+                'authorize_response' => json_encode($response),
+                'payment_data' => json_encode($payment_data),
+            ]);
+
+            return redirect()->route('declined.payment', ['id' => $data->id]);
+
+        } catch (\Exception $e) {
+            // EXCEPTION HANDLING
+            $data->update([
+                'status' => 1,
+                'return_response' => $e->getMessage(),
+                'authorize_response' => json_encode(['exception' => $e->getMessage()]),
+                'payment_data' => json_encode($payment_data),
+            ]);
+
+            return redirect()->route('declined.payment', ['id' => $data->id]);
         }
     }
     

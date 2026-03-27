@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
+    // STRIPE = 0, FETCH = 3, AUTHORIZE = 4, PAYPAL = 5, SQUARE = 6, PAYKINGS / TG = 7
+
     use HasFactory;
 
     protected $guarded = [];
@@ -48,34 +50,51 @@ class Payment extends Model
     }
     
     public function getCard(){
-        if($this->merchants != null){
-            $merchant = $this->merchants->merchant;
-            if($merchant == 0){
-                return strtoupper(json_decode($this->return_response)->payment_method_details->card->brand) . ' **** **** ****' . json_decode($this->return_response)->payment_method_details->card->last4;
-            }else if($merchant == 4){
-                // Authorize
-                return ' **** **** **** ' .substr(json_decode($this->payment_data)->cc_number, -4);
-            }else if($merchant == 3){
-                return ' **** **** **** ' .substr(json_decode($this->payment_data)->cardnumber, -4);
-            }
-        }else{
-            return '';
+        if($this->merchants == null) return '';
+
+        $merchant = $this->merchants->merchant;
+
+        if($merchant == 0){
+            $response = json_decode($this->return_response);
+            if(!$response || !isset($response->payment_method_details->card)) return '';
+            return strtoupper($response->payment_method_details->card->brand) 
+                . ' **** **** **** ' 
+                . $response->payment_method_details->card->last4;
+
+        } elseif($merchant == 4){
+            $data = json_decode($this->payment_data);
+            if(!$data || !isset($data->cc_number)) return '';
+            return '**** **** **** ' . substr($data->cc_number, -4);
+
+        } elseif($merchant == 3){
+            $data = json_decode($this->payment_data);
+            if(!$data || !isset($data->cardnumber)) return '';
+            return '**** **** **** ' . substr($data->cardnumber, -4);
         }
+
+        return '';
     }
     
     public function getCardBrand(){
-        if($this->merchants != null){
-            $merchant = $this->merchants->merchant;
-            if($merchant == 0){
-                return strtoupper(json_decode($this->return_response)->payment_method_details->card->brand);
-            }else if($merchant == 4){
-                return strtoupper(json_decode($this->authorize_response)->card_brand);
-            }else if($merchant == 3){
-                return 'FETCH';
-            }
-        }else{
-            return '';
+        if($this->merchants == null) return '';
+        
+        $merchant = $this->merchants->merchant;
+
+        if($merchant == 0){
+            $response = json_decode($this->return_response);
+            if(!$response || !isset($response->payment_method_details->card->brand)) return '';
+            return strtoupper($response->payment_method_details->card->brand);
+
+        } elseif($merchant == 4){
+            $response = json_decode($this->authorize_response);
+            if(!$response || !isset($response->card_brand)) return '';
+            return strtoupper($response->card_brand);
+
+        } elseif($merchant == 3){
+            return 'FETCH';
         }
+
+        return '';
     }
     
     public function getMerchant(){
@@ -85,6 +104,12 @@ class Payment extends Model
             return 'FETCH';
         }else if($this->merchant == 4){
             return 'AUTHORIZE';
+        }else if($this->merchant == 5){
+            return 'PAYPAL';
+        }else if($this->merchant == 6){
+            return 'SQUARE';
+        }else if($this->merchant == 7){
+            return 'PAYKINGS / TG';
         }
     }
 

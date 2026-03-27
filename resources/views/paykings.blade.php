@@ -11,19 +11,186 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
     <title>{{ config('app.name', 'Laravel') }}</title>
+    <style>
+        .StripeElement {
+            box-sizing: border-box;
+            height: 45px;
+            padding: 12px 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            background-color: white;
+            transition: box-shadow 150ms ease;
+            border-width: 1px;
+            border-color: lightgrey;
+            border-style: solid;
+            margin-bottom: 10px;
+            margin-top: 3px;
+        }
+
+        .StripeElement--focus {
+            box-shadow: 0 1px 3px 0 #cfd7df;
+        }
+
+        .StripeElement--invalid {
+            border-color: #fa755a;
+        }
+
+        .StripeElement--webkit-autofill {
+            background-color: #fefde5 !important;
+        }
+        /*NEW CSS*/
+        *{
+            font-family: "Oswald", sans-serif;
+            font-optical-sizing: auto;
+            font-style: normal;
+        }
+        .payment-right {
+            padding: 40px;
+            box-shadow: -2px -2px 2px 0 #e5e5e5;
+            background-color: white;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        input, textarea, select {
+            border-radius: 8px !important;
+            font-size: 15px !important;
+            height: 42px !important;
+            padding-left: 15px !important;
+        }
+        label {
+            font-weight: 400;
+            font-size: 14px;
+            color: #0000008a;
+        }
+        select#state{
+            margin: 0;
+            border-top-left-radius: 0px !important;
+            border-bottom-left-radius: 0px !important;
+            border-top-right-radius: 0 !important;
+        }
+        .payment-left {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            background-color: white;
+            padding-left: 40px;
+        }
+        
+        .payment-left-inner h3 {
+            font-weight: bold;
+            font-size: 25px;
+        }
+        .payment-left-inner h2 {
+            font-weight: bold;
+            font-size: 40px;
+            margin: 0;
+            color: #17a2b8;
+        }
+        .payment-left-inner img {
+            margin-bottom: 20px;
+        }
+        .payment-left-inner h1 {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        input#cardnumber {
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0px !important;
+            margin-bottom: 0;
+            border-top-right-radius: 0px !important;
+            margin-top: 0;
+            border-right: 0;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        
+        input#expiry {
+            margin: 0;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+        }
+        input#cvv {
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0px !important;
+            margin-top: 0;
+            border-bottom-left-radius: 0 !important;
+        }
+        input#exp_year {
+            margin-top: 0;
+            border-radius: 0px !important;
+        }
+        .form-control::placeholder {
+            color: #d1d1d1;
+            opacity: 1; /* Firefox */
+        }
+        
+        .form-control::-ms-input-placeholder { /* Edge 12 -18 */
+            color: #d1d1d1;
+        }
+        
+        .error.hide {
+            display: none;
+        }
+        
+        .form-control.required {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .form-control.required::placeholder {
+            color: #721c24;
+            opacity: 1; /* Firefox */
+        }
+        
+        .form-control.required::-ms-input-placeholder { /* Edge 12 -18 */
+            color: #721c24;
+        }
+        
+        span#basic-addon2 {
+            background-color: white;
+            padding: 0;
+            border-bottom-right-radius: 0;
+            border-left: 0;
+            padding-right: 10px;
+        }
+        
+        .input-group-append {
+            margin: 0;
+        }
+    </style>
 </head>
+
 <body>
+     @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
     @if (Session::has('error'))
         <p class="alert alert-danger">{{ Session::get('error') }}</p>
     @endif
     @if (session('message'))
         <div class="success-alert alert alert-info">{{ session('message') }}</div>
     @endif
-    @if($data->status == 0)
-    <form id="card-form" action="{{ route('payment.square') }}" method="post">
+
+    @if (Session::has('stripe_error'))
+        <p class="alert alert-danger">{{ Session::get('stripe_error') }}</p>
+    @endif
+    
+    @if ($data->status == 0)
+    <form id="card-form" action="{{ route('payment.paykings') }}" method="post">
         <input type="hidden" name="id" value="{{ $data->id }}">
         <input type="hidden" name="amount" value="{{ $data->price }}">
-        <input type="hidden" name="nonce" id="nonce" value="">
         @csrf
         <div class="container" style="height: 100vh;">
             <div id="error-message"></div>
@@ -33,6 +200,7 @@
                         <div class="payment-left-inner">
                             <h1>{{ $data->client->brand->name }}</h1>
                             <img src="{{ asset($data->client->brand->image) }}" width="180"/>
+                            <!--<h3>{{ $data->package }}</h3>-->
                             <h2>${{ $data->price }}</h2>
                         </div>
                     </div>
@@ -60,6 +228,8 @@
                                                 </span>
                                             </div>
                                         </div>
+                                        <!--<div id="card"></div>-->
+                                        <!--<div id="card-errors" role="alert"></div>-->
                                     </div>
                                     <div class="col-md-4 pr-0">
                                         <input id="expiry" name="exp_month" type="text" placeholder="MM" maxlength="2" class="form-control" required>
@@ -120,19 +290,17 @@
             <div class="success-alert alert alert-info">{{ $data->return_response }}</div>
         @endif
     @endif
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"
         integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://js.stripe.com/v2/"></script>
     <script src="{{ asset('front/js/country-states.js') }}"></script>
-    <!-- Square Web Payments SDK -->
-    <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
-    
     <script>
         // user country code for selected option
         let user_country_code = "US";
     
         (function () {
+    
             // Get the country name and state name from the imported script.
             let country_list = country_and_states['country'];
             let states_list = country_and_states['states'];
@@ -180,8 +348,8 @@
     
             create_states_dropdown();
         })();
-
-        // Card number formatting
+    </script>
+    <script>
         $("#cardnumber").on("keydown", function(e) {
             var cursor = this.selectionStart;
             if (this.selectionEnd != cursor) return;
@@ -209,72 +377,65 @@
             this.selectionEnd = cursor;
         });
 
-        // Square payment processing
-        $(document).ready(function() {
-            $('#card-form').on('submit', function(e) {
-                e.preventDefault();
-                
-                // Get card details from input fields
-                let cardNumber = $('#cardnumber').val().replace(/\s/g, '');
-                let expMonth = $('#expiry').val();
-                let expYear = $('#exp_year').val();
-                let cvv = $('#cvv').val();
-                let cardholderName = $('#cardname').val();
-                
-                // Basic validation
-                if (!cardNumber || !expMonth || !expYear || !cvv || !cardholderName) {
-                    $('#error-message').html('<div class="alert alert-danger">Please fill in all card details</div>');
-                    return false;
+        $('#card-form').on('submit', function (e) {
+
+            // Basic JS-level check before allowing submit
+            var valid = true;
+
+            var requiredFields = [
+                { id: 'user_name',   label: 'Name' },
+                { id: 'user_email',  label: 'Email Address' },
+                { id: 'cardnumber',  label: 'Card Number' },
+                { id: 'expiry',      label: 'Expiry Month' },
+                { id: 'exp_year',    label: 'Expiry Year' },
+                { id: 'cvv',         label: 'CVV' },
+                { id: 'cardname',    label: 'Name on Card' },
+                { id: 'city',        label: 'City' },
+                { id: 'zip',         label: 'ZIP Code' },
+                { id: 'address',     label: 'Address' },
+            ];
+
+            // Clear previous required highlights
+            $('.form-control').removeClass('required');
+
+            requiredFields.forEach(function (field) {
+                var el = $('#' + field.id);
+                if (!el.val() || el.val().trim() === '') {
+                    el.addClass('required');
+                    valid = false;
                 }
-                
-                // Validate expiry date
-                if (expMonth < 1 || expMonth > 12) {
-                    $('#error-message').html('<div class="alert alert-danger">Invalid expiry month</div>');
-                    return false;
-                }
-                
-                // Show loader
-                $('#loader').show();
-                $('#stripe-submit').prop('disabled', true);
-                
-                // Initialize Square payments
-                const payments = window.Square.payments(
-                    '{{ $data->merchants->public_key }}', 
-                    '{{ $data->merchants->square_location_id }}'
-                );
-                
-                // Create a card token using the provided details
-                payments.card().then(async (card) => {
-                    try {
-                        // Tokenize the card details
-                        const result = await card.tokenize({
-                            cardNumber: cardNumber,
-                            expirationMonth: expMonth,
-                            expirationYear: '20' + expYear, // Assuming YY format
-                            cvv: cvv,
-                            cardholderName: cardholderName
-                        });
-                        
-                        if (result.status === 'OK') {
-                            // Set the nonce token
-                            $('#nonce').val(result.token);
-                            // Submit the form
-                            $('#card-form')[0].submit();
-                        } else {
-                            throw new Error(result.errors[0].message);
-                        }
-                    } catch (error) {
-                        $('#error-message').html('<div class="alert alert-danger">' + error.message + '</div>');
-                        $('#loader').hide();
-                        $('#stripe-submit').prop('disabled', false);
-                    }
-                }).catch(function(error) {
-                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment: ' + error.message + '</div>');
-                    $('#loader').hide();
-                    $('#stripe-submit').prop('disabled', false);
-                });
             });
+
+            // Country check
+            var countryVal = $('#country').val();
+            if (!countryVal || countryVal === 'select country' || countryVal === 'Select Country *') {
+                $('#country').addClass('required');
+                valid = false;
+            }
+
+            // State check (can be input or select)
+            var stateVal = $('#state').val();
+            if (!stateVal || stateVal.trim() === '') {
+                $('#state').addClass('required');
+                valid = false;
+            }
+
+            if (!valid) {
+                // Scroll to first error
+                var firstError = $('.form-control.required').first();
+                if (firstError.length) {
+                    $('html, body').animate({
+                        scrollTop: firstError.offset().top - 100
+                    }, 400);
+                }
+                return false; // Stop submission
+            }
+
+            // All good — show loader, disable button
+            $('#stripe-submit').prop('disabled', true).text('Processing...');
+            $('#loader').fadeIn(200);
         });
     </script>
 </body>
+
 </html>
