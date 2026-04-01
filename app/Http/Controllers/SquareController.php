@@ -9,8 +9,6 @@ use Square\SquareClient;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\Address;
-use Square\Models\VerificationDetails;
-use Square\Models\BillingContact;
 use Square\Exceptions\ApiException;
 
 class SquareController extends Controller
@@ -35,7 +33,7 @@ class SquareController extends Controller
 
             // Prepare Money object
             $money = new Money();
-            $money->setAmount((int)($data->price * 100)); // cents
+            $money->setAmount((int)($data->price * 100));
             $money->setCurrency('USD');
 
             // Create payment request using card nonce
@@ -45,20 +43,12 @@ class SquareController extends Controller
                 $money
             );
 
-            // Set required fields
+            // Set basic required fields
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setLocationId($data->merchants->square_location_id);
             $paymentRequest->setReferenceId('invoice_' . $data->id);
-            
-            // Set customer email
-            if ($request->input('user_email')) {
-                $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
-            }
-            
-            // Set note
-            if ($data->package) {
-                $paymentRequest->setNote($data->package);
-            }
+            $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
+            $paymentRequest->setNote($data->package);
             
             // Create billing address
             $address = new Address();
@@ -73,27 +63,21 @@ class SquareController extends Controller
             
             $paymentRequest->setBillingAddress($address);
             
-            // Create billing contact for verification (CRITICAL FOR SQUARE)
-            $billingContact = new BillingContact();
-            $billingContact->setGivenName($request->input('user_name'));
-            $billingContact->setFamilyName('');
-            $billingContact->setEmail($request->input('user_email'));
-            $billingContact->setPhone('');
-            
-            // Create verification details
-            $verificationDetails = new VerificationDetails();
-            $verificationDetails->setBillingContact($billingContact);
-            
-            // Set verification details
-            $paymentRequest->setVerificationDetails($verificationDetails);
+            // Set verification details using the setter that accepts an array
+            // This is the key to fixing the error
+            $paymentRequest->setVerificationDetails([
+                'billing_contact' => [
+                    'given_name' => $request->input('user_name'),
+                    'family_name' => '',
+                    'email' => $request->input('user_email'),
+                    'phone' => $request->input('phone') ?? ''
+                ]
+            ]);
             
             // Set customer ID if available
             if ($data->client_id) {
                 $paymentRequest->setCustomerId((string)$data->client_id);
             }
-            
-            // Set shipping address (same as billing)
-            $paymentRequest->setShippingAddress($address);
             
             // Add metadata
             $paymentRequest->setMetadata([
@@ -133,7 +117,6 @@ class SquareController extends Controller
             }
             
             \Log::error('Square API Error: ' . $errorMessage);
-            \Log::error('Square API Error Details: ' . json_encode($errors));
             
             $data->update([
                 'square_response' => json_encode($errors),
@@ -145,7 +128,6 @@ class SquareController extends Controller
             return redirect()->route('declined.payment', ['id' => $data->id]);
         } catch (Exception $e) {
             \Log::error('Square Exception: ' . $e->getMessage());
-            \Log::error('Square Exception Trace: ' . $e->getTraceAsString());
             
             $data->update([
                 'square_response' => json_encode([]),
