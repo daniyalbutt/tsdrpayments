@@ -199,6 +199,7 @@
                         borderColor: '#80bdff',
                     },
                     input: {
+                        fontFamily: 'Montserrat, sans-serif',
                         fontSize: '14px',
                         color: '#495057',
                     },
