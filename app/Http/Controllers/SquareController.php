@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Payment;
 use Exception;
 use Square\SquareClient;
+use Square\Models\Address;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Exceptions\ApiException;
@@ -44,13 +45,15 @@ class SquareController extends Controller
 
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
-            $paymentRequest->setBillingAddress([
-                'address_line_1' => $request->input('address'),
-                'locality' => $request->input('city'),
-                'administrative_district_level_1' => $request->input('state'),
-                'postal_code' => $request->input('zip'),
-                'country' => $request->input('country')
-            ]);
+
+            $address = new Address();
+            $address->setAddressLine1($request->input('address'));
+            $address->setLocality($request->input('city'));
+            $address->setAdministrativeDistrictLevel1($request->input('state'));
+            $address->setPostalCode($request->input('zip'));
+            $address->setCountry($request->input('country'));
+
+            $paymentRequest->setBillingAddress($address);
             $paymentRequest->setNote($data->package);
 
             // Call createPayment
