@@ -259,6 +259,12 @@
                     return false;
                 }
                 
+                // Ensure expiry year is 2 digits
+                if (expYear.length !== 2) {
+                    $('#error-message').html('<div class="alert alert-danger">Invalid expiry year (use YY format)</div>');
+                    return false;
+                }
+                
                 // Show loader
                 $('#loader').show();
                 $('#pay-button').prop('disabled', true);
