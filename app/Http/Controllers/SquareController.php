@@ -36,50 +36,46 @@ class SquareController extends Controller
             $money->setAmount((int)($data->price * 100)); // cents
             $money->setCurrency('USD');
 
-            // Create billing address
-            $billingAddress = new Address();
-            $billingAddress->setAddressLine1($request->input('address'));
-            $billingAddress->setLocality($request->input('city'));
-            $billingAddress->setAdministrativeDistrictLevel1($request->input('state'));
-            $billingAddress->setPostalCode($request->input('zip'));
-            $billingAddress->setCountry($request->input('country'));
-            
-            // Create billing contact with all required fields
-            $billingContact = [
-                'family_name' => $data->client->name,
-                'given_name' => $data->client->name,
-                'email' => $request->input('user_email'),
-                'address' => $billingAddress
-            ];
-
             // Create payment request using card nonce
             $paymentRequest = new CreatePaymentRequest(
                 $request->input('nonce'), // card nonce from Square.js
-                uniqid(), // idempotency key
+                uniqid('payment_' . $data->id . '_', true), // idempotency key
                 $money
             );
 
+            // Set required and optional fields
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
-            
-            // Set billing address in the correct format
-            $paymentRequest->setBillingAddress($billingAddress);
-            
-            // Add billing contact details (this is required)
-            $paymentRequest->setVerificationToken($request->input('nonce'));
-            
-            // Set additional fields
             $paymentRequest->setNote($data->package);
-            $paymentRequest->setReferenceId('payment_' . $data->id);
+            $paymentRequest->setReferenceId('invoice_' . $data->id);
+            $paymentRequest->setLocationId($data->merchants->square_location_id);
             
-            // Add customer information
-            $paymentRequest->setCustomerId($data->client->id);
+            // Add billing address if provided
+            if ($request->input('address')) {
+                $address = new Address();
+                $address->setAddressLine1($request->input('address'));
+                $address->setLocality($request->input('city'));
+                $address->setAdministrativeDistrictLevel1($request->input('state'));
+                $address->setPostalCode($request->input('zip'));
+                $address->setCountry($request->input('country'));
+                $paymentRequest->setBillingAddress($address);
+            }
             
+            // Add customer ID if available
+            if ($data->client_id) {
+                $paymentRequest->setCustomerId((string)$data->client_id);
+            }
+
             // Call createPayment
             $response = $paymentsApi->createPayment($paymentRequest);
 
             if ($response->isError()) {
-                throw new Exception(json_encode($response->getErrors()));
+                $errors = $response->getErrors();
+                $errorMsg = '';
+                foreach ($errors as $error) {
+                    $errorMsg .= $error->getDetail() . ' ';
+                }
+                throw new Exception($errorMsg);
             }
 
             $result = $response->getResult()->getPayment();
@@ -106,6 +102,7 @@ class SquareController extends Controller
                 'return_response' => $errorMessage ?: $e->getMessage(),
                 'payment_data' => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
             ]);
+            
             return redirect()->route('declined.payment', ['id' => $data->id]);
         } catch (Exception $e) {
             $data->update([
@@ -114,6 +111,7 @@ class SquareController extends Controller
                 'return_response' => $e->getMessage(),
                 'payment_data' => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
             ]);
+            
             return redirect()->route('declined.payment', ['id' => $data->id]);
         }
     }
@@ -132,7 +130,6 @@ class SquareController extends Controller
     public function declinedPayment($id)
     {
         $data = Payment::find($id);
-        $transaction_id = '';
-        return view('payment-declined', compact('id', 'transaction_id', 'data'));
+        return view('payment-declined', compact('id', 'data'));
     }
 }

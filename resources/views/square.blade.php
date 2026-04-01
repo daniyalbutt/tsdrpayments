@@ -103,7 +103,7 @@
                                 <div class="error hide">
                                     <p class="alert alert-danger"></p>
                                 </div>
-                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" id="stripe-submit">Pay Now</button>
+                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" id="pay-button">Pay Now</button>
                                 <div id="loader" style="display: none;">
                                     <img src="{{ asset('images/loader.gif') }}" alt="">
                                 </div>
@@ -210,14 +210,33 @@
             this.selectionEnd = cursor;
         });
 
-        // Square payment processing
+        // Square payment processing with custom inputs
         $(document).ready(function() {
-            let cardTokenizePromise = null;
+            let paymentsInstance = null;
+            let cardInstance = null;
+            
+            // Initialize Square payments on page load
+            async function initializeSquare() {
+                try {
+                    paymentsInstance = window.Square.payments(
+                        '{{ $data->merchants->public_key }}', 
+                        '{{ $data->merchants->square_location_id }}'
+                    );
+                    
+                    cardInstance = await paymentsInstance.card();
+                    console.log('Square initialized successfully');
+                } catch (error) {
+                    console.error('Failed to initialize Square:', error);
+                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment system. Please refresh and try again.</div>');
+                }
+            }
+            
+            initializeSquare();
             
             $('#card-form').on('submit', async function(e) {
                 e.preventDefault();
                 
-                // Get card details from input fields
+                // Get card details from custom inputs
                 let cardNumber = $('#cardnumber').val().replace(/\s/g, '');
                 let expMonth = $('#expiry').val();
                 let expYear = $('#exp_year').val();
@@ -238,24 +257,22 @@
                 
                 // Show loader
                 $('#loader').show();
-                $('#stripe-submit').prop('disabled', true);
+                $('#pay-button').prop('disabled', true);
                 $('#error-message').html('');
                 
                 try {
-                    // Initialize Square payments
-                    const payments = window.Square.payments(
-                        '{{ $data->merchants->public_key }}', 
-                        '{{ $data->merchants->square_location_id }}'
-                    );
+                    if (!cardInstance) {
+                        throw new Error('Payment system not initialized. Please refresh the page.');
+                    }
                     
-                    // Create card instance
-                    const card = await payments.card();
-                    
-                    // Attach card fields (Square.js v2 approach)
-                    await card.attach('#card-container');
-                    
-                    // Tokenize the card
-                    const tokenResult = await card.tokenize();
+                    // Create a card token using the custom input values
+                    const tokenResult = await cardInstance.tokenize({
+                        cardNumber: cardNumber,
+                        expirationMonth: expMonth,
+                        expirationYear: '20' + expYear, // Convert YY to YYYY
+                        cvv: cvv,
+                        cardholderName: cardholderName
+                    });
                     
                     if (tokenResult.status === 'OK') {
                         // Set the nonce token
@@ -269,7 +286,7 @@
                     console.error('Square payment error:', error);
                     $('#error-message').html('<div class="alert alert-danger">' + error.message + '</div>');
                     $('#loader').hide();
-                    $('#stripe-submit').prop('disabled', false);
+                    $('#pay-button').prop('disabled', false);
                 }
             });
         });
