@@ -76,7 +76,7 @@
                             </div>
                             <div class="col-md-12">
                                 <label for="owner">Name on card</label>
-                                <div id="cardholder-container"></div>
+                                <div id="cardname"></div>
                             </div>
                             <div class="col-md-12">
                                 <label for="country">Country or region</label>
