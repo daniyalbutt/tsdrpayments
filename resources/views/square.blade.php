@@ -12,6 +12,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
     <title>{{ config('app.name', 'Laravel') }}</title>
+    <style>
+        .square-input {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            height: 38px;
+            width: 100%;
+            background-color: #fff;
+        }
+        .square-input iframe {
+            height: 38px !important;
+        }
+        .error-message {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
     @if (Session::has('error'))
@@ -53,29 +69,14 @@
                                 <label for="card_information">Card Information</label>
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <div class="input-group">
-                                            <input type="text" id="cardnumber" name="cardnumber" placeholder="0000-0000-0000-0000" class="form-control" required>
-                                            <div class="input-group-append">
-                                                <span class="input-group-text" id="basic-addon2">
-                                                    <img src="{{ asset('images/payment-img.png') }}">
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 pr-0">
-                                        <input id="expiry" name="exp_month" type="text" placeholder="MM" maxlength="2" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-4 pr-0 pl-0">
-                                        <input id="exp_year" name="exp_year" type="text" placeholder="YY" maxlength="2" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-4 pl-0">
-                                        <input type="text" id="cvv" name="cvv" placeholder="CVV" maxlength="4" class="form-control" required>
+                                        <!-- Square Card Container - Required for proper tokenization -->
+                                        <div id="card-container"></div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-12">
                                 <label for="owner">Name on card</label>
-                                <input type="text" id="cardname" name="owner" class="form-control" placeholder="{{ $data->client->name }}" required>
+                                <div id="cardholder-container"></div>
                             </div>
                             <div class="col-md-12">
                                 <label for="country">Country or region</label>
@@ -103,7 +104,7 @@
                                 <div class="error hide">
                                     <p class="alert alert-danger"></p>
                                 </div>
-                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" id="pay-button">Pay Now</button>
+                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" id="pay-button" type="button">Pay Now</button>
                                 <div id="loader" style="display: none;">
                                     <img src="{{ asset('images/loader.gif') }}" alt="">
                                 </div>
@@ -127,7 +128,7 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="{{ asset('front/js/country-states.js') }}"></script>
     <!-- Square Web Payments SDK -->
-     @if($data->merchants->sandbox == 1)
+    @if($data->merchants->sandbox == 1)
     <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
     @else
     <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
@@ -186,102 +187,71 @@
             create_states_dropdown();
         })();
 
-        // Card number formatting
-        $("#cardnumber").on("keydown", function(e) {
-            var cursor = this.selectionStart;
-            if (this.selectionEnd != cursor) return;
-            if (e.which == 46) {
-                if (this.value[cursor] == " ") this.selectionStart++;
-            } else if (e.which == 8) {
-                if (cursor && this.value[cursor - 1] == " ") this.selectionEnd--;
-            }
-        }).on("input", function() {
-            var value = this.value;
-            var cursor = this.selectionStart;
-            var matches = value.substring(0, cursor).match(/[^0-9]/g);
-            if (matches) cursor -= matches.length;
-            value = value.replace(/[^0-9]/g, "").substring(0, 19);
-            var formatted = "";
-            for (var i=0, n=value.length; i<n; i++) {
-                if (i && i % 4 == 0) {
-                    if (formatted.length <= cursor) cursor++;
-                    formatted += " ";
-                }
-                formatted += value[i];
-            }
-            if (formatted == this.value) return;
-            this.value = formatted;
-            this.selectionEnd = cursor;
-        });
-
-        // Square payment processing with custom inputs
+        // Square payment processing with proper card mounting
         $(document).ready(function() {
             let paymentsInstance = null;
-            let cardInstance = null;
+            let card = null;
+            let cardholderNameField = null;
             
             // Initialize Square payments on page load
             async function initializeSquare() {
                 try {
+                    // Initialize Square payments
                     paymentsInstance = window.Square.payments(
                         '{{ $data->merchants->public_key }}', 
                         '{{ $data->merchants->square_location_id }}'
                     );
                     
-                    cardInstance = await paymentsInstance.card();
+                    // Create card object
+                    card = await paymentsInstance.card();
+                    
+                    // Mount the card input fields
+                    await card.attach('#card-container');
+                    
+                    // Create and mount cardholder name field
+                    cardholderNameField = await paymentsInstance.cardholderName();
+                    await cardholderNameField.attach('#cardholder-container');
+                    
                     console.log('Square initialized successfully');
                 } catch (error) {
                     console.error('Failed to initialize Square:', error);
-                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment system. Please refresh and try again.</div>');
+                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment system: ' + error.message + '</div>');
                 }
             }
             
             initializeSquare();
             
-            $('#card-form').on('submit', async function(e) {
-                e.preventDefault();
-                
-                // Get card details from custom inputs
-                let cardNumber = $('#cardnumber').val().replace(/\s/g, '');
-                let expMonth = $('#expiry').val();
-                let expYear = $('#exp_year').val();
-                let cvv = $('#cvv').val();
-                let cardholderName = $('#cardname').val();
-                
-                // Basic validation
-                if (!cardNumber || !expMonth || !expYear || !cvv || !cardholderName) {
-                    $('#error-message').html('<div class="alert alert-danger">Please fill in all card details</div>');
-                    return false;
-                }
-                
-                // Validate expiry date
-                if (expMonth < 1 || expMonth > 12) {
-                    $('#error-message').html('<div class="alert alert-danger">Invalid expiry month</div>');
-                    return false;
-                }
-                
-                // Ensure expiry year is 2 digits
-                if (expYear.length !== 2) {
-                    $('#error-message').html('<div class="alert alert-danger">Invalid expiry year (use YY format)</div>');
-                    return false;
-                }
-                
+            // Handle payment button click
+            $('#pay-button').on('click', async function() {
                 // Show loader
                 $('#loader').show();
                 $('#pay-button').prop('disabled', true);
                 $('#error-message').html('');
                 
                 try {
-                    if (!cardInstance) {
+                    if (!card) {
                         throw new Error('Payment system not initialized. Please refresh the page.');
                     }
                     
-                    // Create a card token using the custom input values
-                    const tokenResult = await cardInstance.tokenize({
-                        cardNumber: cardNumber,
-                        expirationMonth: expMonth,
-                        expirationYear: '20' + expYear, // Convert YY to YYYY
-                        cvv: cvv,
-                        cardholderName: cardholderName
+                    // Get the cardholder name
+                    const cardholderName = cardholderNameField ? cardholderNameField.getValue() : $('#cardname').val();
+                    
+                    // Tokenize the card with verification details
+                    const tokenResult = await card.tokenize({
+                        cardholderName: cardholderName,
+                        billingContact: {
+                            givenName: $('#user_name').val().split(' ')[0] || $('#user_name').val(),
+                            familyName: $('#user_name').val().split(' ').slice(1).join(' ') || '',
+                            email: $('#user_email').val(),
+                            phone: $('#user_phone').val() || ''
+                        },
+                        billingAddress: {
+                            addressLine1: $('#address').val(),
+                            locality: $('#city').val(),
+                            administrativeDistrictLevel1: $('#state').val(),
+                            postalCode: $('#zip').val(),
+                            country: $('#country').val()
+                        }
                     });
                     
                     if (tokenResult.status === 'OK') {
