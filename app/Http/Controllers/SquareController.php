@@ -9,6 +9,8 @@ use Square\SquareClient;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\Address;
+use Square\Models\VerificationDetails;
+use Square\Models\BillingContact;
 use Square\Exceptions\ApiException;
 
 class SquareController extends Controller
@@ -43,35 +45,62 @@ class SquareController extends Controller
                 $money
             );
 
-            // Set basic required fields only
+            // Set required fields
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setLocationId($data->merchants->square_location_id);
             $paymentRequest->setReferenceId('invoice_' . $data->id);
             
-            // Optional: Add customer email if available
+            // Set customer email
             if ($request->input('user_email')) {
                 $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
             }
             
-            // Optional: Add note
+            // Set note
             if ($data->package) {
                 $paymentRequest->setNote($data->package);
             }
             
-            // Add billing address only if all fields are present
-            if ($request->input('address') && $request->input('city') && $request->input('country')) {
-                $address = new Address();
-                $address->setAddressLine1($request->input('address'));
-                $address->setLocality($request->input('city'));
-                $address->setPostalCode($request->input('zip') ?: '00000');
-                $address->setCountry($request->input('country'));
-                
-                if ($request->input('state')) {
-                    $address->setAdministrativeDistrictLevel1($request->input('state'));
-                }
-                
-                $paymentRequest->setBillingAddress($address);
+            // Create billing address
+            $address = new Address();
+            $address->setAddressLine1($request->input('address'));
+            $address->setLocality($request->input('city'));
+            $address->setPostalCode($request->input('zip') ?: '00000');
+            $address->setCountry($request->input('country'));
+            
+            if ($request->input('state')) {
+                $address->setAdministrativeDistrictLevel1($request->input('state'));
             }
+            
+            $paymentRequest->setBillingAddress($address);
+            
+            // Create billing contact for verification (CRITICAL FOR SQUARE)
+            $billingContact = new BillingContact();
+            $billingContact->setGivenName($request->input('user_name'));
+            $billingContact->setFamilyName('');
+            $billingContact->setEmail($request->input('user_email'));
+            $billingContact->setPhone('');
+            
+            // Create verification details
+            $verificationDetails = new VerificationDetails();
+            $verificationDetails->setBillingContact($billingContact);
+            
+            // Set verification details
+            $paymentRequest->setVerificationDetails($verificationDetails);
+            
+            // Set customer ID if available
+            if ($data->client_id) {
+                $paymentRequest->setCustomerId((string)$data->client_id);
+            }
+            
+            // Set shipping address (same as billing)
+            $paymentRequest->setShippingAddress($address);
+            
+            // Add metadata
+            $paymentRequest->setMetadata([
+                'invoice_id' => (string)$data->id,
+                'package' => $data->package ?? '',
+                'customer_name' => $request->input('user_name')
+            ]);
 
             // Call createPayment
             $response = $paymentsApi->createPayment($paymentRequest);
@@ -104,6 +133,7 @@ class SquareController extends Controller
             }
             
             \Log::error('Square API Error: ' . $errorMessage);
+            \Log::error('Square API Error Details: ' . json_encode($errors));
             
             $data->update([
                 'square_response' => json_encode($errors),
@@ -115,6 +145,7 @@ class SquareController extends Controller
             return redirect()->route('declined.payment', ['id' => $data->id]);
         } catch (Exception $e) {
             \Log::error('Square Exception: ' . $e->getMessage());
+            \Log::error('Square Exception Trace: ' . $e->getTraceAsString());
             
             $data->update([
                 'square_response' => json_encode([]),
