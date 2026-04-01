@@ -130,16 +130,16 @@
     <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
     
     <script>
-        // user country code for selected option
+        // User country code for selected option
         let user_country_code = "US";
-    
+        
         (function () {
             // Get the country name and state name from the imported script.
             let country_list = country_and_states['country'];
             let states_list = country_and_states['states'];
-    
+        
             // creating country name drop-down
-            let option =  '';
+            let option = '';
             option += '<option>select country</option>';
             for(let country_code in country_list){
                 // set selected option user country
@@ -147,11 +147,11 @@
                 option += '<option value="'+country_code+'"'+selected+'>'+country_list[country_code]+'</option>';
             }
             document.getElementById('country').innerHTML = option;
-    
+        
             // creating states name drop-down
-            let text_box = '<input type="text" class="input-text" id="state">';
+            let text_box = '<input type="text" class="form-control" id="state" name="state">';
             let state_code_id = document.getElementById("state-code");
-    
+        
             function create_states_dropdown() {
                 // get selected country code
                 let country_code = document.getElementById("country").value;
@@ -163,7 +163,7 @@
                 }
                 let option = '';
                 if (states.length > 0) {
-                    option = '<select id="state" name="set_state">\n';
+                    option = '<select id="state" name="state" class="form-control">\n';
                     for (let i = 0; i < states.length; i++) {
                         option += '<option value="'+states[i].code+'">'+states[i].name+'</option>';
                     }
@@ -174,11 +174,11 @@
                 }
                 state_code_id.innerHTML = option;
             }
-    
+        
             // country select change event
             const country_select = document.getElementById("country");
             country_select.addEventListener('change', create_states_dropdown);
-    
+        
             create_states_dropdown();
         })();
 
@@ -212,7 +212,9 @@
 
         // Square payment processing
         $(document).ready(function() {
-            $('#card-form').on('submit', function(e) {
+            let cardTokenizePromise = null;
+            
+            $('#card-form').on('submit', async function(e) {
                 e.preventDefault();
                 
                 // Get card details from input fields
@@ -237,43 +239,38 @@
                 // Show loader
                 $('#loader').show();
                 $('#stripe-submit').prop('disabled', true);
+                $('#error-message').html('');
                 
-                // Initialize Square payments
-                const payments = window.Square.payments(
-                    '{{ $data->merchants->public_key }}', 
-                    '{{ $data->merchants->square_location_id }}'
-                );
-                
-                // Create a card token using the provided details
-                payments.card().then(async (card) => {
-                    try {
-                        // Tokenize the card details
-                        const result = await card.tokenize({
-                            cardNumber: cardNumber,
-                            expirationMonth: expMonth,
-                            expirationYear: '20' + expYear, // Assuming YY format
-                            cvv: cvv,
-                            cardholderName: cardholderName
-                        });
-                        
-                        if (result.status === 'OK') {
-                            // Set the nonce token
-                            $('#nonce').val(result.token);
-                            // Submit the form
-                            $('#card-form')[0].submit();
-                        } else {
-                            throw new Error(result.errors[0].message);
-                        }
-                    } catch (error) {
-                        $('#error-message').html('<div class="alert alert-danger">' + error.message + '</div>');
-                        $('#loader').hide();
-                        $('#stripe-submit').prop('disabled', false);
+                try {
+                    // Initialize Square payments
+                    const payments = window.Square.payments(
+                        '{{ $data->merchants->public_key }}', 
+                        '{{ $data->merchants->square_location_id }}'
+                    );
+                    
+                    // Create card instance
+                    const card = await payments.card();
+                    
+                    // Attach card fields (Square.js v2 approach)
+                    await card.attach('#card-container');
+                    
+                    // Tokenize the card
+                    const tokenResult = await card.tokenize();
+                    
+                    if (tokenResult.status === 'OK') {
+                        // Set the nonce token
+                        $('#nonce').val(tokenResult.token);
+                        // Submit the form
+                        $('#card-form')[0].submit();
+                    } else {
+                        throw new Error(tokenResult.errors[0].message);
                     }
-                }).catch(function(error) {
-                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment: ' + error.message + '</div>');
+                } catch (error) {
+                    console.error('Square payment error:', error);
+                    $('#error-message').html('<div class="alert alert-danger">' + error.message + '</div>');
                     $('#loader').hide();
                     $('#stripe-submit').prop('disabled', false);
-                });
+                }
             });
         });
     </script>
