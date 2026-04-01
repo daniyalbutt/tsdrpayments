@@ -69,14 +69,14 @@
                                 <label for="card_information">Card Information</label>
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <!-- Square Card Container - Required for proper tokenization -->
+                                        <!-- Square Card Container -->
                                         <div id="card-container"></div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-12">
                                 <label for="owner">Name on card</label>
-                                <div id="cardname"></div>
+                                <input type="text" id="cardname" name="owner" class="form-control" placeholder="{{ $data->client->name }}" required>
                             </div>
                             <div class="col-md-12">
                                 <label for="country">Country or region</label>
@@ -187,11 +187,10 @@
             create_states_dropdown();
         })();
 
-        // Square payment processing with proper card mounting
+        // Square payment processing
         $(document).ready(function() {
             let paymentsInstance = null;
             let card = null;
-            let cardholderNameField = null;
             
             // Initialize Square payments on page load
             async function initializeSquare() {
@@ -207,10 +206,6 @@
                     
                     // Mount the card input fields
                     await card.attach('#card-container');
-                    
-                    // Create and mount cardholder name field
-                    cardholderNameField = await paymentsInstance.cardholderName();
-                    await cardholderNameField.attach('#cardholder-container');
                     
                     console.log('Square initialized successfully');
                 } catch (error) {
@@ -233,25 +228,34 @@
                         throw new Error('Payment system not initialized. Please refresh the page.');
                     }
                     
-                    // Get the cardholder name
-                    const cardholderName = cardholderNameField ? cardholderNameField.getValue() : $('#cardname').val();
+                    // Get the cardholder name from the input field
+                    const cardholderName = $('#cardname').val();
                     
-                    // Tokenize the card with verification details
+                    if (!cardholderName) {
+                        throw new Error('Please enter the name on card.');
+                    }
+                    
+                    // Get address information
+                    const address = {
+                        addressLine1: $('#address').val(),
+                        locality: $('#city').val(),
+                        administrativeDistrictLevel1: $('#state').val(),
+                        postalCode: $('#zip').val(),
+                        country: $('#country').val()
+                    };
+                    
+                    // Get contact information
+                    const contact = {
+                        givenName: $('#user_name').val().split(' ')[0] || $('#user_name').val(),
+                        familyName: $('#user_name').val().split(' ').slice(1).join(' ') || '',
+                        email: $('#user_email').val()
+                    };
+                    
+                    // Tokenize the card with all required details
                     const tokenResult = await card.tokenize({
                         cardholderName: cardholderName,
-                        billingContact: {
-                            givenName: $('#user_name').val().split(' ')[0] || $('#user_name').val(),
-                            familyName: $('#user_name').val().split(' ').slice(1).join(' ') || '',
-                            email: $('#user_email').val(),
-                            phone: $('#user_phone').val() || ''
-                        },
-                        billingAddress: {
-                            addressLine1: $('#address').val(),
-                            locality: $('#city').val(),
-                            administrativeDistrictLevel1: $('#state').val(),
-                            postalCode: $('#zip').val(),
-                            country: $('#country').val()
-                        }
+                        billingAddress: address,
+                        billingContact: contact
                     });
                     
                     if (tokenResult.status === 'OK') {
