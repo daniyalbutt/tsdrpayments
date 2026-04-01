@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,20 +11,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
     <title>{{ config('app.name', 'Laravel') }}</title>
+
     <style>
-        .square-input {
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            padding: 0.375rem 0.75rem;
-            height: 38px;
-            width: 100%;
-            background-color: #fff;
+        #card-container {
+            padding: 0;
+            margin-bottom: 0;
         }
-        .square-input iframe {
-            height: 38px !important;
+        .sq-card-wrapper {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
         }
-        .error-message {
-            margin-top: 10px;
+        #card-container iframe {
+            min-height: 40px !important;
         }
     </style>
 </head>
@@ -36,6 +34,7 @@
     @if (session('message'))
         <div class="success-alert alert alert-info">{{ session('message') }}</div>
     @endif
+
     @if($data->status == 0)
     <form id="card-form" action="{{ route('payment.square') }}" method="post">
         <input type="hidden" name="id" value="{{ $data->id }}">
@@ -65,46 +64,47 @@
                                 <label for="user_email">Email Address</label>
                                 <input id="user_email" name="user_email" class="form-control" type="email" value="{{ $data->client->email }}">
                             </div>
+
                             <div class="col-md-12 mb-2">
-                                <label for="card_information">Card Information</label>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <!-- Square Card Container -->
-                                        <div id="card-container"></div>
-                                    </div>
-                                </div>
+                                <label>Card Information</label>
+                                <div id="card-container" class="form-control" style="height: auto; padding: 6px 12px;"></div>
                             </div>
+
                             <div class="col-md-12">
                                 <label for="owner">Name on card</label>
                                 <input type="text" id="cardname" name="owner" class="form-control" placeholder="{{ $data->client->name }}" required>
                             </div>
+
                             <div class="col-md-12">
                                 <label for="country">Country or region</label>
                                 <div class="row no-gap-row">
                                     <div class="col-md-6 pr-0">
-                                        <select name="country" id="country" class="form-control" required style="border-top-right-radius: 0 !important;border-bottom-right-radius: 0px !important;border-bottom-left-radius: 0 !important;margin-bottom: 0;">
+                                        <select name="country" id="country" class="form-control" required style="border-top-right-radius:0!important;border-bottom-right-radius:0!important;border-bottom-left-radius:0!important;margin-bottom:0;">
                                             <option>Select Country *</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 pl-0 pr-0">
-                                        <input name="city" id="city" required class="form-control" placeholder="City*" value="" style="border-radius: 0 !important;margin-bottom: 0;">
+                                        <input name="city" id="city" required class="form-control" placeholder="City*" style="border-radius:0!important;margin-bottom:0;">
                                     </div>
                                     <div class="col-md-3 pl-0">
-                                        <input name="zip" id="zip" class="form-control" placeholder="ZIP*" required style="border-top-left-radius: 0 !important;border-bottom-right-radius: 0px !important;border-bottom-left-radius: 0 !important;margin-bottom: 0;">
+                                        <input name="zip" id="zip" class="form-control" placeholder="ZIP*" required style="border-top-left-radius:0!important;border-bottom-right-radius:0!important;border-bottom-left-radius:0!important;margin-bottom:0;">
                                     </div>
                                     <div class="col-md-8 pr-0">
-                                        <input name="address" id="address" class="form-control" placeholder="Address*" value="" required style="margin: 0;border-top-left-radius: 0 !important;border-top-right-radius: 0px !important;border-bottom-right-radius: 0px !important;">
+                                        <input name="address" id="address" class="form-control" placeholder="Address*" required style="margin:0;border-top-left-radius:0!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important;">
                                     </div>
                                     <div class="col-md-4 pl-0">
-                                        <span id="state-code"><input type="text" id="state" class="form-control" placeholder="State*" name="state" value=""></span>
+                                        <span id="state-code">
+                                            <input type="text" id="state" class="form-control" placeholder="State*" name="state">
+                                        </span>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="col-md-12 mt-4">
                                 <div class="error hide">
                                     <p class="alert alert-danger"></p>
                                 </div>
-                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" id="pay-button" type="button">Pay Now</button>
+                                <button class="btn btn-info pl-5 pr-5 form-submit-btn" type="button" id="stripe-submit">Pay Now</button>
                                 <div id="loader" style="display: none;">
                                     <img src="{{ asset('images/loader.gif') }}" alt="">
                                 </div>
@@ -127,150 +127,136 @@
         integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="{{ asset('front/js/country-states.js') }}"></script>
-    <!-- Square Web Payments SDK -->
+
+    {{-- ✅ Load correct Square JS based on sandbox flag --}}
     @if($data->merchants->sandbox == 1)
-    <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+        <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
     @else
-    <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
+        <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
     @endif
-    
+
     <script>
-        // User country code for selected option
         let user_country_code = "US";
-        
+
         (function () {
-            // Get the country name and state name from the imported script.
             let country_list = country_and_states['country'];
             let states_list = country_and_states['states'];
-        
-            // creating country name drop-down
-            let option = '';
-            option += '<option>select country</option>';
-            for(let country_code in country_list){
-                // set selected option user country
+
+            let option = '<option>select country</option>';
+            for (let country_code in country_list) {
                 let selected = (country_code == user_country_code) ? ' selected' : '';
-                option += '<option value="'+country_code+'"'+selected+'>'+country_list[country_code]+'</option>';
+                option += '<option value="' + country_code + '"' + selected + '>' + country_list[country_code] + '</option>';
             }
             document.getElementById('country').innerHTML = option;
-        
-            // creating states name drop-down
-            let text_box = '<input type="text" class="form-control" id="state" name="state">';
+
+            let text_box = '<input type="text" class="form-control" id="state" name="state" placeholder="State*" style="margin:0;border-top-left-radius:0!important;border-top-right-radius:0!important;">';
             let state_code_id = document.getElementById("state-code");
-        
+
             function create_states_dropdown() {
-                // get selected country code
                 let country_code = document.getElementById("country").value;
                 let states = states_list[country_code];
-                // invalid country code or no states add textbox
-                if(!states){
+                if (!states) {
                     state_code_id.innerHTML = text_box;
                     return;
                 }
                 let option = '';
                 if (states.length > 0) {
-                    option = '<select id="state" name="state" class="form-control">\n';
+                    option = '<select id="state" name="state" class="form-control" style="margin:0;border-top-left-radius:0!important;border-top-right-radius:0!important;">';
                     for (let i = 0; i < states.length; i++) {
-                        option += '<option value="'+states[i].code+'">'+states[i].name+'</option>';
+                        option += '<option value="' + states[i].code + '">' + states[i].name + '</option>';
                     }
                     option += '</select>';
                 } else {
-                    // create input textbox if no states 
-                    option = text_box
+                    option = text_box;
                 }
                 state_code_id.innerHTML = option;
             }
-        
-            // country select change event
-            const country_select = document.getElementById("country");
-            country_select.addEventListener('change', create_states_dropdown);
-        
+
+            document.getElementById("country").addEventListener('change', create_states_dropdown);
             create_states_dropdown();
         })();
 
-        // Square payment processing
-        $(document).ready(function() {
-            let paymentsInstance = null;
-            let card = null;
-            
-            // Initialize Square payments on page load
-            async function initializeSquare() {
-                try {
-                    // Initialize Square payments
-                    paymentsInstance = window.Square.payments(
-                        '{{ $data->merchants->public_key }}', 
-                        '{{ $data->merchants->square_location_id }}'
-                    );
-                    
-                    // Create card object
-                    card = await paymentsInstance.card();
-                    
-                    // Mount the card input fields
-                    await card.attach('#card-container');
-                    
-                    console.log('Square initialized successfully');
-                } catch (error) {
-                    console.error('Failed to initialize Square:', error);
-                    $('#error-message').html('<div class="alert alert-danger">Failed to initialize payment system: ' + error.message + '</div>');
-                }
+        let squareCard;
+
+        async function initializeSquare() {
+            if (!window.Square) {
+                $('#error-message').html('<div class="alert alert-danger">Square.js failed to load.</div>');
+                return;
             }
-            
-            initializeSquare();
-            
-            // Handle payment button click
-            $('#pay-button').on('click', async function() {
-                // Show loader
+
+            const payments = window.Square.payments(
+                '{{ $data->merchants->public_key }}',
+                '{{ $data->merchants->square_location_id }}'
+            );
+
+            squareCard = await payments.card({
+                style: {
+                    '.input-container': {
+                        borderColor: '#ced4da',
+                        borderRadius: '4px',
+                    },
+                    '.input-container.is-focus': {
+                        borderColor: '#80bdff',
+                    },
+                    input: {
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        color: '#495057',
+                    },
+                    'input::placeholder': {
+                        color: '#6c757d',
+                    },
+                }
+            });
+
+            await squareCard.attach('#card-container');
+        }
+
+        $(document).ready(function () {
+            initializeSquare().catch(function (err) {
+                console.error('Square init error:', err);
+                $('#error-message').html('<div class="alert alert-danger">Failed to load card fields: ' + err.message + '</div>');
+            });
+
+            $('#stripe-submit').on('click', async function (e) {
+                e.preventDefault();
+
+                if (!$('#cardname').val() || !$('#city').val() || !$('#zip').val() || !$('#address').val() || $('#country').val() === 'select country') {
+                    $('#error-message').html('<div class="alert alert-danger">Please fill in all required fields.</div>');
+                    return;
+                }
+
                 $('#loader').show();
-                $('#pay-button').prop('disabled', true);
+                $('#stripe-submit').prop('disabled', true);
                 $('#error-message').html('');
-                
+
                 try {
-                    if (!card) {
-                        throw new Error('Payment system not initialized. Please refresh the page.');
-                    }
-                    
-                    // Get the cardholder name from the input field
-                    const cardholderName = $('#cardname').val();
-                    
-                    if (!cardholderName) {
-                        throw new Error('Please enter the name on card.');
-                    }
-                    
-                    // Get address information
-                    const address = {
-                        addressLine1: $('#address').val(),
-                        locality: $('#city').val(),
-                        administrativeDistrictLevel1: $('#state').val(),
-                        postalCode: $('#zip').val(),
-                        country: $('#country').val()
-                    };
-                    
-                    // Get contact information
-                    const contact = {
-                        givenName: $('#user_name').val().split(' ')[0] || $('#user_name').val(),
-                        familyName: $('#user_name').val().split(' ').slice(1).join(' ') || '',
-                        email: $('#user_email').val()
-                    };
-                    
-                    // Tokenize the card with all required details
-                    const tokenResult = await card.tokenize({
-                        cardholderName: cardholderName,
-                        billingAddress: address,
-                        billingContact: contact
+                    const nameParts = $('#cardname').val().trim().split(' ');
+
+                    const result = await squareCard.tokenize({
+                        billingContact: {
+                            givenName: nameParts[0] || '',
+                            familyName: nameParts.slice(1).join(' ') || '',
+                            addressLines: [$('#address').val()],
+                            city: $('#city').val(),
+                            state: $('#state').val() || '',
+                            postalCode: $('#zip').val(),
+                            countryCode: $('#country').val(),
+                        }
                     });
-                    
-                    if (tokenResult.status === 'OK') {
-                        // Set the nonce token
-                        $('#nonce').val(tokenResult.token);
-                        // Submit the form
+
+                    if (result.status === 'OK') {
+                        $('#nonce').val(result.token);
                         $('#card-form')[0].submit();
                     } else {
-                        throw new Error(tokenResult.errors[0].message);
+                        const errorMsg = result.errors.map(err => err.message).join(', ');
+                        throw new Error(errorMsg);
                     }
+
                 } catch (error) {
-                    console.error('Square payment error:', error);
                     $('#error-message').html('<div class="alert alert-danger">' + error.message + '</div>');
                     $('#loader').hide();
-                    $('#pay-button').prop('disabled', false);
+                    $('#stripe-submit').prop('disabled', false);
                 }
             });
         });
