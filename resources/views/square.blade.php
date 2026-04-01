@@ -127,7 +127,11 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="{{ asset('front/js/country-states.js') }}"></script>
     <!-- Square Web Payments SDK -->
+     @if($data->merchants->sandbox == 1)
     <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+    @else
+    <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
+    @endif
     
     <script>
         // User country code for selected option
