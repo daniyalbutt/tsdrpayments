@@ -864,3 +864,6 @@ label.checkout-box-wrapper input {
     }
 }
 
+.payment-left-inner img {
+    width: 250px;
+}
