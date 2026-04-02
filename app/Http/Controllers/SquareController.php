@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Payment;
 use Exception;
-use Square\SquareClient;
-use Square\Environments;
-use Square\Models\CreatePaymentRequest;
-use Square\Models\Money;
-use Square\Models\Address;
+use SquareConnect\ApiClient;
+use SquareConnect\Configuration;
+use SquareConnect\Api\PaymentsApi;
+use SquareConnect\Model\CreatePaymentRequest;
+use SquareConnect\Model\Money;
+use SquareConnect\Model\Address;
 
 class SquareController extends Controller
 {
@@ -23,30 +24,29 @@ class SquareController extends Controller
         }
 
         try {
-            $client = new SquareClient(
-                token: $data->merchants->private_key,
-                options: [
-                    'baseUrl' => $data->merchants->sandbox == 1
-                        ? Environments::Sandbox->value
-                        : Environments::Production->value,
-                ]
-            );
+            // v3 square/connect configuration
+            $config = Configuration::getDefaultConfiguration()
+                ->setAccessToken($data->merchants->private_key);
 
-            // ✅ v45+ way — access payments directly
-            $paymentsApi = $client->payments;
+            if ($data->merchants->sandbox == 1) {
+                $config->setHost('https://connect.squareupsandbox.com');
+            } else {
+                $config->setHost('https://connect.squareup.com');
+            }
 
-            // Prepare Money object
+            $apiClient  = new ApiClient($config);
+            $paymentsApi = new PaymentsApi($apiClient);
+
+            // Money
             $money = new Money();
             $money->setAmount((int)($data->price * 100));
             $money->setCurrency('USD');
 
-            // Create payment request
-            $paymentRequest = new CreatePaymentRequest(
-                sourceId: $request->input('nonce'),
-                idempotencyKey: uniqid('payment_' . $data->id . '_', true),
-                amountMoney: $money
-            );
-
+            // Payment request
+            $paymentRequest = new CreatePaymentRequest();
+            $paymentRequest->setSourceId($request->input('nonce'));
+            $paymentRequest->setIdempotencyKey(uniqid('payment_' . $data->id . '_', true));
+            $paymentRequest->setAmountMoney($money);
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setLocationId($data->merchants->square_location_id);
             $paymentRequest->setReferenceId('invoice_' . $data->id);
@@ -66,16 +66,8 @@ class SquareController extends Controller
 
             $paymentRequest->setBillingAddress($address);
 
-            $paymentRequest->setMetadata([
-                'invoice_id'    => (string)$data->id,
-                'package'       => $data->package ?? '',
-                'customer_name' => $request->input('user_name'),
-            ]);
-
-            // ✅ v45+ way — call createPayment on $client->payments
             $response = $paymentsApi->createPayment($paymentRequest);
-
-            $result = $response->getPayment();
+            $result    = $response->getPayment();
 
             $data->update([
                 'status'          => 2,
@@ -86,13 +78,18 @@ class SquareController extends Controller
 
             return redirect()->route('success.payment', ['id' => $data->id]);
 
-        } catch (\Square\Exceptions\SquareException $e) {
-            \Log::error('Square API Error: ' . $e->getMessage());
+        } catch (\SquareConnect\ApiException $e) {
+            $errorBody = $e->getResponseBody();
+            $errorMsg  = isset($errorBody->errors) 
+                ? collect($errorBody->errors)->pluck('detail')->implode(', ') 
+                : $e->getMessage();
+
+            \Log::error('Square API Error: ' . $errorMsg);
 
             $data->update([
-                'square_response' => json_encode($e->getMessage()),
+                'square_response' => json_encode($errorBody),
                 'status'          => 1,
-                'return_response' => $e->getMessage(),
+                'return_response' => $errorMsg,
                 'payment_data'    => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
             ]);
 
@@ -117,7 +114,7 @@ class SquareController extends Controller
         $data = Payment::find($id);
         $transaction_id = '';
         if ($data->status == 2) {
-            $paymentData = json_decode($data->return_response);
+            $paymentData    = json_decode($data->return_response);
             $transaction_id = $paymentData->id ?? '';
         }
         return view('payment-success', compact('id', 'transaction_id', 'data'));
