@@ -230,19 +230,8 @@
                 $('#error-message').html('');
 
                 try {
-                    const nameParts = $('#cardname').val().trim().split(' ');
-
-                    const result = await squareCard.tokenize({
-                        billingContact: {
-                            givenName: nameParts[0] || '',
-                            familyName: nameParts.slice(1).join(' ') || '',
-                            addressLines: [$('#address').val()],
-                            city: $('#city').val(),
-                            state: $('#state').val() || '',
-                            postalCode: $('#zip').val(),
-                            countryCode: $('#country').val(),
-                        }
-                    });
+                    // ✅ No arguments — billing is handled on the backend
+                    const result = await squareCard.tokenize();
 
                     if (result.status === 'OK') {
                         $('#nonce').val(result.token);
