@@ -63,22 +63,6 @@ class SquareController extends Controller
             
             $paymentRequest->setBillingAddress($address);
             
-            // Set verification details using the setter that accepts an array
-            // This is the key to fixing the error
-            $paymentRequest->setVerificationDetails([
-                'billing_contact' => [
-                    'given_name' => $request->input('user_name'),
-                    'family_name' => '',
-                    'email' => $request->input('user_email'),
-                    'phone' => $request->input('phone') ?? ''
-                ]
-            ]);
-            
-            // Set customer ID if available
-            if ($data->client_id) {
-                $paymentRequest->setCustomerId((string)$data->client_id);
-            }
-            
             // Add metadata
             $paymentRequest->setMetadata([
                 'invoice_id' => (string)$data->id,
