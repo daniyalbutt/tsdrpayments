@@ -64,7 +64,11 @@
 							<tbody>
 								@foreach($data as $key => $value)
 								<tr>
-									<td><img src="{{ asset($value->image) }}" alt="{{ $value->name }}" width="150"></td>
+									<td>
+										@if($value->id != 13)
+										<img src="{{ asset($value->image) }}" alt="{{ $value->name }}" width="150">
+										@endif
+									</td>
 									<td>{{ $value->name }}</td>
 									<td>{!! $value->status == 0 ? '<span class="badge badge-info">Active<span>' : '<span class="badge badge-danger">Deactive<span>' !!}</td>
 									<td>{{ $value->created_at->format('d M, Y g:i A') }}</td>
