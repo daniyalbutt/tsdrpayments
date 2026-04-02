@@ -10,7 +10,6 @@ use Square\Environments;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\Address;
-use Square\Exceptions\ApiException;
 
 class SquareController extends Controller
 {
@@ -24,107 +23,91 @@ class SquareController extends Controller
         }
 
         try {
-            // Initialize SquareClient
             $client = new SquareClient(
                 token: $data->merchants->private_key,
                 options: [
                     'baseUrl' => $data->merchants->sandbox == 1
-                        ? \Square\Environments::Sandbox->value
-                        : \Square\Environments::Production->value,
+                        ? Environments::Sandbox->value
+                        : Environments::Production->value,
                 ]
             );
 
-            $paymentsApi = $client->getPaymentsApi();
+            // ✅ v45+ way — access payments directly
+            $paymentsApi = $client->payments;
 
             // Prepare Money object
             $money = new Money();
             $money->setAmount((int)($data->price * 100));
             $money->setCurrency('USD');
 
-            // Create payment request using card nonce
+            // Create payment request
             $paymentRequest = new CreatePaymentRequest(
-                $request->input('nonce'),
-                uniqid('payment_' . $data->id . '_', true),
-                $money
+                sourceId: $request->input('nonce'),
+                idempotencyKey: uniqid('payment_' . $data->id . '_', true),
+                amountMoney: $money
             );
 
-            // Set basic required fields
             $paymentRequest->setAutocomplete(true);
             $paymentRequest->setLocationId($data->merchants->square_location_id);
             $paymentRequest->setReferenceId('invoice_' . $data->id);
             $paymentRequest->setBuyerEmailAddress($request->input('user_email'));
             $paymentRequest->setNote($data->package);
-            
-            // Create billing address
+
+            // Billing address
             $address = new Address();
             $address->setAddressLine1($request->input('address'));
             $address->setLocality($request->input('city'));
             $address->setPostalCode($request->input('zip') ?: '00000');
             $address->setCountry($request->input('country'));
-            
+
             if ($request->input('state')) {
                 $address->setAdministrativeDistrictLevel1($request->input('state'));
             }
-            
+
             $paymentRequest->setBillingAddress($address);
-            
-            // Add metadata
+
             $paymentRequest->setMetadata([
-                'invoice_id' => (string)$data->id,
-                'package' => $data->package ?? '',
-                'customer_name' => $request->input('user_name')
+                'invoice_id'    => (string)$data->id,
+                'package'       => $data->package ?? '',
+                'customer_name' => $request->input('user_name'),
             ]);
 
-            // Call createPayment
+            // ✅ v45+ way — call createPayment on $client->payments
             $response = $paymentsApi->createPayment($paymentRequest);
 
-            if ($response->isError()) {
-                $errors = $response->getErrors();
-                $errorMsg = '';
-                foreach ($errors as $error) {
-                    $errorMsg .= $error->getDetail() . ' ';
-                }
-                throw new Exception($errorMsg);
-            }
-
-            $result = $response->getResult()->getPayment();
+            $result = $response->getPayment();
 
             $data->update([
-                'status' => 2,
+                'status'          => 2,
                 'return_response' => json_encode($result),
-                'payment_data' => json_encode($payment_data),
+                'payment_data'    => json_encode($payment_data),
                 'square_response' => json_encode($result),
             ]);
 
             return redirect()->route('success.payment', ['id' => $data->id]);
 
-        } catch (ApiException $e) {
-            $errors = $e->getErrors();
-            $errorMessage = '';
-            foreach ($errors as $error) {
-                $errorMessage .= $error->getDetail() . ' ';
-            }
-            
-            \Log::error('Square API Error: ' . $errorMessage);
-            
+        } catch (\Square\Exceptions\SquareException $e) {
+            \Log::error('Square API Error: ' . $e->getMessage());
+
             $data->update([
-                'square_response' => json_encode($errors),
-                'status' => 1,
-                'return_response' => $errorMessage ?: $e->getMessage(),
-                'payment_data' => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
+                'square_response' => json_encode($e->getMessage()),
+                'status'          => 1,
+                'return_response' => $e->getMessage(),
+                'payment_data'    => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
             ]);
-            
+
             return redirect()->route('declined.payment', ['id' => $data->id]);
+
         } catch (Exception $e) {
             \Log::error('Square Exception: ' . $e->getMessage());
-            
+
             $data->update([
                 'square_response' => json_encode([]),
-                'status' => 1,
+                'status'          => 1,
                 'return_response' => $e->getMessage(),
-                'payment_data' => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
+                'payment_data'    => json_encode($request->except(['amount', '_token', 'id', 'nonce'])),
             ]);
-            
+
             return redirect()->route('declined.payment', ['id' => $data->id]);
         }
     }
