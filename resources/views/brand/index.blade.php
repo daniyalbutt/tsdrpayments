@@ -67,6 +67,8 @@
 									<td>
 										@if($value->id != 13)
 										<img src="{{ asset($value->image) }}" alt="{{ $value->name }}" width="150">
+										@else
+										<img src="{{ asset('images/no-logo.png') }}" alt="{{ $value->name }}" width="150">
 										@endif
 									</td>
 									<td>{{ $value->name }}</td>
