@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Payment;
 use Exception;
 use Square\SquareClient;
+use Square\Environments;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\Address;
@@ -24,10 +25,14 @@ class SquareController extends Controller
 
         try {
             // Initialize SquareClient
-            $client = new SquareClient([
-                'accessToken' => $data->merchants->private_key,
-                'environment' => $data->merchants->sandbox == 1 ? 'sandbox' : 'production',
-            ]);
+            $client = new SquareClient(
+                token: $data->merchants->private_key,
+                options: [
+                    'baseUrl' => $data->merchants->sandbox == 1
+                        ? \Square\Environments::Sandbox->value
+                        : \Square\Environments::Production->value,
+                ]
+            );
 
             $paymentsApi = $client->getPaymentsApi();
 
