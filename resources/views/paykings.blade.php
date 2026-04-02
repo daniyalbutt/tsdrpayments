@@ -199,7 +199,9 @@
                 <div class="col-md-5 pr-0">
                     <div class="payment-left">
                         <div class="payment-left-inner">
+                            @if($data->client->brand->id != 13)
                             <h1>{{ $data->client->brand->name }}</h1>
+                            @endif
                             <img src="{{ asset($data->client->brand->image) }}" width="180"/>
                             <!--<h3>{{ $data->package }}</h3>-->
                             <h2>${{ $data->price }}</h2>
