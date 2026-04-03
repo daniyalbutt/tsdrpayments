@@ -38,6 +38,7 @@ Route::get('declined/{id}', [StripeController::class, 'declinedPayment'])->name(
 Route::get('expayment.squareport', [FrontController::class, 'export'])->name('export');
 Route::post('payment/square', [SquareController::class, 'paymentSquare'])->name('payment.square');
 Route::post('payment/paykings', [PaykingsController::class, 'processPayment'])->name('payment.paykings');
+Route::post('/payment/nomod', [NomodController::class, 'processPayment'])->name('payment.nomod');
 
 // Route::get('stripe', [StripeController::class, 'stripe']);
 Route::post('stripe', [StripeController::class, 'stripePost'])->name('stripe.post');

@@ -47,6 +47,7 @@
 												<option value="5" {{ $data->merchant == 5 ? 'selected' : '' }}>PAYPAL</option>
 												<option value="6" {{ $data->merchant == 6 ? 'selected' : '' }}>SQUARE</option>
 												<option value="7" {{ $data->merchant == 7 ? 'selected' : '' }}>PAYKINGS / TG</option>
+												<option value="8" {{ $data->merchant == 8 ? 'selected' : '' }}>NOMOD</option>
 											</select>
 										</div>
 									</div>
@@ -61,7 +62,7 @@
 									</div>
 									<div class="col-md-12">
 										<div class="form-group mb-3">
-											<label class="form-label">Publishable key / Login ID / Client ID / Application ID / Security Key</label>
+											<label class="form-label">Publishable key / Login ID / Client ID / Application ID / Security Key / API KEY</label>
 											<input type="text" class="form-control" name="public_key" required value="{{ old('public_key', $data->public_key) }}">
 										</div>
 									</div>

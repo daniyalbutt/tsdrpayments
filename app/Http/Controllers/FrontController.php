@@ -45,6 +45,8 @@ class FrontController extends Controller
             return view('square', compact('data'));
         }else if($merchant_type == 7){
             return view('paykings', compact('data'));
+        }else if($merchant_type == 8){
+            return view('nomod', compact('data'));
         }
     }
     

@@ -47,6 +47,7 @@
 												<!-- <option value="3">FETCH</option> -->
 												<option value="6">SQUARE</option>
 												<option value="7">PAYKINGS / TG</option>
+												<option value="8">NOMOD</option>
 											</select>
 										</div>
 									</div>
@@ -61,7 +62,7 @@
 									</div>
 									<div class="col-md-12">
 										<div class="form-group mb-3">
-											<label class="form-label">Publishable key / Login ID / Client ID / Application ID / Security Key </label>
+											<label class="form-label">Publishable key / Login ID / Client ID / Application ID / Security Key / API KEY</label>
 											<input type="text" class="form-control" name="public_key" value="{{ old('public_key') }}">
 										</div>
 									</div>

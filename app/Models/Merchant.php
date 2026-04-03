@@ -22,6 +22,8 @@ class Merchant extends Model
             return 'SQUARE';
         }else if($this->merchant == 7){
             return 'PAYKINGS / TG';
+        }else if($this->merchant == 8){
+            return 'NOMOD';
         }
     }
 }

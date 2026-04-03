@@ -18,4 +18,7 @@
     <hr>
     <strong>PayKings / TG Credentials:</strong><br>
     • Security Key (use in Secret Key field)
+    <hr>
+    <strong>Nomod Credentials:</strong><br>
+    • API Key (use in Publishable key field)
 </div>
