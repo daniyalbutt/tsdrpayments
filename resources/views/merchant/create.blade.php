@@ -44,7 +44,7 @@
 												<option value="0">STRIPE</option>
 												<option value="4">AUTHORIZE</option>
 												<option value="5">PAYPAL</option>
-												<!-- <option value="3">FETCH</option> -->
+												<option value="3">FETCH</option>
 												<option value="6">SQUARE</option>
 												<option value="7">PAYKINGS / TG</option>
 												<option value="8">NOMOD</option>
