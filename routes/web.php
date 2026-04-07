@@ -12,6 +12,7 @@ use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\ScrappedController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PayPalController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -39,6 +40,9 @@ Route::get('expayment.squareport', [FrontController::class, 'export'])->name('ex
 Route::post('payment/square', [SquareController::class, 'paymentSquare'])->name('payment.square');
 Route::post('payment/paykings', [PaykingsController::class, 'processPayment'])->name('payment.paykings');
 Route::post('/payment/nomod', [NomodController::class, 'processPayment'])->name('payment.nomod');
+Route::post('paypal/create/{id}',  [PayPalController::class, 'createOrder'])->name('paypal.create');
+Route::get('paypal/capture/{id}',  [PayPalController::class, 'captureOrder'])->name('paypal.capture');
+Route::get('paypal/cancel/{id}',   [PayPalController::class, 'cancelOrder'])->name('paypal.cancel');
 
 // Route::get('stripe', [StripeController::class, 'stripe']);
 Route::post('stripe', [StripeController::class, 'stripePost'])->name('stripe.post');
