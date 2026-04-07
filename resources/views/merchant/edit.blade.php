@@ -43,9 +43,9 @@
 											<select name="type" id="type" class="form-control" required>
 												<option value="">Select Merchant</option>
 												<option value="0" {{ $data->merchant == 0 ? 'selected' : '' }}>STRIPE</option>
+												<option value="3" {{ $data->merchant == 3 ? 'selected' : '' }}>FETCH</option>
 												<option value="4" {{ $data->merchant == 4 ? 'selected' : '' }}>AUTHORIZE</option>
 												<option value="5" {{ $data->merchant == 5 ? 'selected' : '' }}>PAYPAL</option>
-												<option value="3" {{ $data->merchant == 3 ? 'selected' : '' }}>FETCH</option>
 												<option value="6" {{ $data->merchant == 6 ? 'selected' : '' }}>SQUARE</option>
 												<option value="7" {{ $data->merchant == 7 ? 'selected' : '' }}>PAYKINGS / TG</option>
 												<option value="8" {{ $data->merchant == 8 ? 'selected' : '' }}>NOMOD</option>
