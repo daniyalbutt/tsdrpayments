@@ -210,35 +210,13 @@
                                 <label for="user_email">Email Address</label>
                                 <input id="user_email" name="user_email" class="form-control" type="email" value="{{ $data->client->email }}">
                             </div>
-                            <div class="col-md-12">
-                                <label for="country">Country or region</label>
-                                <div class="row no-gap-row">
-                                    <div class="col-md-6 pr-0">
-                                        <select name="country" id="country" class="form-control" required style="border-top-right-radius: 0 !important;border-bottom-right-radius: 0px !important;border-bottom-left-radius: 0 !important;margin-bottom: 0;">
-                                            <option>Select Country *</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 pl-0 pr-0">
-                                        <input name="city" id="city" required class="form-control" placeholder="City*" value="" style="border-radius: 0 !important;margin-bottom: 0;">
-                                    </div>
-                                    <div class="col-md-3 pl-0">
-                                        <input name="zip" id="zip" class="form-control" placeholder="ZIP*" required style="border-top-left-radius: 0 !important;border-bottom-right-radius: 0px !important;border-bottom-left-radius: 0 !important;margin-bottom: 0;">
-                                    </div>
-                                    <div class="col-md-8 pr-0">
-                                        <input name="address" id="address" class="form-control" placeholder="Address*" value="" required style="margin: 0;border-top-left-radius: 0 !important;border-top-right-radius: 0px !important;border-bottom-right-radius: 0px !important;">
-                                    </div>
-                                    <div class="col-md-4 pl-0">
-                                        <span id="state-code"><input type="text" id="state" class="form-control" placeholder="State*" name="state" value=""></span>
-                                    </div>
-                                </div>
-                            </div>
                             <div class="col-md-12 mt-4">
                                 <div class="error hide">
                                     <p class="alert alert-danger"></p>
                                 </div>
-                                <form action="{{ route('paypal.create', $data->id) }}" method="POST" style="display:inline-block; margin-left:10px;">
+                                <form action="{{ route('paypal.create', $data->id) }}" method="POST" style="display:inline-block; margin-left:10px;" onsubmit="handlePaypalSubmit(this)">
                                     @csrf
-                                    <button type="submit" class="btn pl-5 pr-5" style="background:#FFC439; color:#003087; font-weight:bold;">
+                                    <button type="submit" id="paypal-btn" class="btn pl-5 pr-5" style="background:#FFC439; color:#003087; font-weight:bold;">
                                         <img src="{{ asset('images/paypal-logo.png') }}"
                                             alt="PayPal" height="20" style="vertical-align:middle;margin-right:5px;width: auto;">
                                     </button>
@@ -265,58 +243,14 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="{{ asset('front/js/country-states.js') }}"></script>
     <script>
-        // user country code for selected option
-        let user_country_code = "US";
-    
-        (function () {
-    
-            // Get the country name and state name from the imported script.
-            let country_list = country_and_states['country'];
-            let states_list = country_and_states['states'];
-    
-            // creating country name drop-down
-            let option =  '';
-            option += '<option>select country</option>';
-            for(let country_code in country_list){
-                // set selected option user country
-                let selected = (country_code == user_country_code) ? ' selected' : '';
-                option += '<option value="'+country_code+'"'+selected+'>'+country_list[country_code]+'</option>';
-            }
-            document.getElementById('country').innerHTML = option;
-    
-            // creating states name drop-down
-            let text_box = '<input type="text" class="input-text" id="state">';
-            let state_code_id = document.getElementById("state-code");
-    
-            function create_states_dropdown() {
-                // get selected country code
-                let country_code = document.getElementById("country").value;
-                let states = states_list[country_code];
-                // invalid country code or no states add textbox
-                if(!states){
-                    state_code_id.innerHTML = text_box;
-                    return;
-                }
-                let option = '';
-                if (states.length > 0) {
-                    option = '<select id="state" name="set_state">\n';
-                    for (let i = 0; i < states.length; i++) {
-                        option += '<option value="'+states[i].code+'">'+states[i].name+'</option>';
-                    }
-                    option += '</select>';
-                } else {
-                    // create input textbox if no states 
-                    option = text_box
-                }
-                state_code_id.innerHTML = option;
-            }
-    
-            // country select change event
-            const country_select = document.getElementById("country");
-            country_select.addEventListener('change', create_states_dropdown);
-    
-            create_states_dropdown();
-        })();
+        function handlePaypalSubmit(form) {
+            var btn = document.getElementById('paypal-btn');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            document.getElementById('loader').style.display = 'inline-block';
+            return true; // allow form to submit
+        }
     </script>
 </body>
 
